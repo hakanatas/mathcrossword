@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Crossword - Matematik Bulmacası</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <main class="app-container">
+        <header>
+            <h1>Bulmaca</h1>
+            <div class="stats">
+                <div class="stat-item">Seviye: <span id="level-display">1</span></div>
+                <div class="stat-item">Puan: <span id="score-display">0</span></div>
+            </div>
+        </header>
+
+        <section class="game-area">
+            <div id="puzzle-grid" class="puzzle-grid">
+                <!-- Grid öğeleri burada oluşturulacak -->
+            </div>
+        </section>
+
+        <section class="pool-area">
+            <h2>Kullanılabilir Sayılar</h2>
+            <div id="number-pool" class="number-pool">
+                <!-- Sürüklenebilir sayılar burada olacak -->
+            </div>
+        </section>
+
+        <footer>
+            <button id="new-game-btn" class="btn btn-secondary">Yeni Bulmaca</button>
+            <button id="check-btn" class="btn btn-primary">Çözümü Kontrol Et</button>
+        </footer>
+    </main>
+
+    <div id="win-overlay" class="overlay hidden">
+        <div class="overlay-content">
+            <h2>Harika!</h2>
+            <p>Bulmacayı başarıyla çözdün.</p>
+            <button id="next-level-btn" class="btn btn-primary">Sonraki Seviye</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
