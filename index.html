@@ -34,8 +34,9 @@
         </section>
 
         <footer>
-            <button id="new-game-btn" class="btn btn-secondary">Yeni Bulmaca</button>
-            <button id="check-btn" class="btn btn-primary">Çözümü Kontrol Et</button>
+            <button id="menu-btn" class="btn btn-secondary">Menü</button>
+            <button id="new-game-btn" class="btn btn-secondary">Yeni</button>
+            <button id="check-btn" class="btn btn-primary">Kontrol</button>
         </footer>
     </main>
 
@@ -44,6 +45,19 @@
             <h2>Harika!</h2>
             <p>Bulmacayı başarıyla çözdün.</p>
             <button id="next-level-btn" class="btn btn-primary">Sonraki Seviye</button>
+        </div>
+    </div>
+
+    <!-- Difficulty Screen -->
+    <div id="difficulty-screen" class="overlay hidden">
+        <div class="overlay-content">
+            <h2>Zorluk Seç</h2>
+            <p>Başlamak için bir zorluk seviyesi seçin.</p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-primary" data-diff="easy">Kolay (İpuçlu)</button>
+                <button class="btn btn-primary" data-diff="medium">Orta</button>
+                <button class="btn btn-primary" data-diff="hard">Zor (İpucu Yok)</button>
+            </div>
         </div>
     </div>
 

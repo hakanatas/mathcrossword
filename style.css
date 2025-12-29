@@ -1,67 +1,100 @@
 :root {
-    --primary: #2563eb;
-    --primary-light: #60a5fa;
-    --secondary: #f1f5f9;
+    /* Modern Palette */
+    --primary: #4f46e5;
+    /* Indigo 600 */
+    --primary-hover: #4338ca;
+    /* Indigo 700 */
+    --secondary: #e2e8f0;
+    /* Slate 200 */
     --accent: #f59e0b;
-    --bg-app: #ffffff;
-    --bg-body: #f8fafc;
-    --text: #1e293b;
-    --text-muted: #64748b;
-    --border: #e2e8f0;
-    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    /* Amber 500 */
+
+    --bg-body: #f1f5f9;
+    /* Slate 100 */
+    --bg-surface: #ffffff;
+
+    --text-main: #0f172a;
+    /* Slate 900 */
+    --text-secondary: #64748b;
+    /* Slate 500 */
+
+    --success: #10b981;
+    /* Emerald 500 */
+    --error: #ef4444;
+    /* Red 500 */
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
     font-family: 'Outfit', sans-serif;
     background-color: var(--bg-body);
-    color: var(--text);
+    color: var(--text-main);
     height: 100vh;
+    /* Mobile viewport height fix */
+    height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
     overflow: hidden;
 }
 
-/* Removed Background Blobs */
-.background-blobs {
-    display: none;
-}
-
 /* App Container */
 .app-container {
-    width: 98%;
-    max-width: 750px;
-    height: 95vh;
+    width: 100%;
+    max-width: 600px;
+    height: 100%;
     max-height: 900px;
-    background: var(--bg-app);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: var(--shadow);
+    background: var(--bg-surface);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    gap: 1.5rem;
+    position: relative;
+    box-shadow: var(--shadow-lg);
 }
 
+/* On desktop, add some margins and radius */
+@media (min-width: 600px) {
+    .app-container {
+        height: 95vh;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--secondary);
+    }
+}
+
+/* Header */
 header {
+    flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 2px solid var(--border);
-    padding-bottom: 1rem;
+    padding: 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+    border-bottom: 1px solid var(--secondary);
 }
 
 h1 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     font-weight: 800;
     color: var(--primary);
+    letter-spacing: -0.02em;
 }
 
 .stats {
@@ -70,29 +103,41 @@ h1 {
 }
 
 .stat-item {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-secondary);
+    padding: 0.25rem 0.75rem;
+    background: var(--bg-body);
+    border-radius: var(--radius-sm);
 }
 
-/* Puzzle Grid */
+.stat-item span {
+    color: var(--text-main);
+    font-weight: 800;
+}
+
+/* Game Area */
 .game-area {
     flex: 1;
+    position: relative;
+    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: hidden;
-    padding: 1rem 0;
+    background-image:
+        radial-gradient(circle at 10% 20%, rgb(241, 245, 249) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgb(241, 245, 249) 0%, transparent 20%);
+    padding: 10px;
 }
 
 .puzzle-grid {
     display: grid;
-    gap: 6px;
-    width: fit-content;
-    height: fit-content;
-    max-width: 100%;
-    max-height: 100%;
-    margin: 0 auto;
+    /* grid-template-columns set by JS */
+    /* width set by JS */
+    gap: 4px;
+    /* Default gap */
+    transform-origin: center;
+    transition: transform 0.3s ease;
 }
 
 .grid-cell {
@@ -100,52 +145,223 @@ h1 {
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 8px;
-    font-size: inherit;
-    font-weight: 800;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
     user-select: none;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    width: 100%;
+    transition: var(--transition);
 }
 
+/* Cell Types */
 .cell-number {
-    background: #fff;
-    border: 2px solid #cbd5e1;
-    /* Darker border for clarity */
-    color: var(--text);
+    background: var(--bg-surface);
+    border: 2px solid var(--secondary);
+    color: var(--text-main);
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    /* Subtle depth */
+    box-shadow: 0 2px 0 0 var(--secondary);
 }
 
 .cell-number.filled {
     background: var(--primary);
     border-color: var(--primary);
-    color: #fff;
-    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
-    transform: scale(1.02);
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 .cell-operator {
-    color: var(--text-muted);
-    font-size: 1.8rem;
-    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 1.2em;
+    /* Relative to cell font size */
 }
 
 .cell-result {
-    color: var(--text);
     font-weight: 800;
-    border: 2px solid #94a3b8;
-    /* Even more defined border for results */
-    background: #f1f5f9;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    color: var(--text-main);
+    background: var(--bg-body);
+    border: 2px solid var(--primary);
+    /* Dashed border for results to distinguish them? Or solid? */
+    /* Let's keep it solid but distinctive */
 }
 
 .cell-empty {
     visibility: hidden;
+    pointer-events: none;
 }
 
-/* Shake Animation */
+/* Interactions */
+.drag-over {
+    background: var(--bg-body);
+    border-color: var(--primary);
+    transform: scale(0.95);
+}
+
+/* Pool Area */
+.pool-area {
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--secondary);
+    z-index: 10;
+}
+
+.pool-area h2 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+    text-align: center;
+}
+
+.number-pool {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+}
+
+.pool-number {
+    width: 3.5rem;
+    height: 3.5rem;
+    background: var(--bg-surface);
+    border: 2px solid var(--secondary);
+    color: var(--primary);
+    border-radius: var(--radius-md);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    cursor: grab;
+    transition: var(--transition);
+    box-shadow: 0 2px 0 0 var(--secondary);
+}
+
+.pool-number:active {
+    cursor: grabbing;
+}
+
+.pool-number:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+    box-shadow: 0 4px 0 0 var(--secondary);
+}
+
+.pool-number.dragging {
+    opacity: 0.5;
+    transform: scale(0.9);
+}
+
+/* Footer Actions */
+footer {
+    padding: 1rem 1.5rem;
+    background: var(--bg-body);
+    display: flex;
+    gap: 1rem;
+    border-top: 1px solid var(--secondary);
+}
+
+.btn {
+    flex: 1;
+    padding: 0.8rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4);
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.5);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--text-secondary);
+    border: 2px solid var(--secondary);
+}
+
+.btn-secondary:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-main);
+    background: var(--bg-body);
+}
+
+/* Overlay */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.overlay:not(.hidden) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.overlay-content {
+    background: var(--bg-surface);
+    padding: 2.5rem;
+    border-radius: var(--radius-xl);
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    max-width: 90%;
+    width: 400px;
+    transform: scale(0.9);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.overlay:not(.hidden) .overlay-content {
+    transform: scale(1);
+}
+
+.overlay h2 {
+    font-size: 2rem;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+.overlay p {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+}
+
+/* Animations */
 .shake {
     animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
 }
@@ -174,142 +390,25 @@ h1 {
     }
 }
 
-/* Number Pool */
-.pool-area h2 {
-    font-size: 1rem;
-    margin-bottom: 0.5rem;
-    opacity: 0.7;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.number-pool {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    min-height: 80px;
-    background: var(--secondary);
-    padding: 1.2rem;
-    border-radius: 12px;
-    justify-content: center;
-    border: 1px solid var(--border);
-}
-
-.pool-number {
-    width: 60px;
-    height: 60px;
-    background: #fff;
-    color: var(--primary);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 8px;
-    font-size: 1.6rem;
-    font-weight: 800;
-    cursor: grab;
-    transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    border: 1px solid var(--border);
-}
-
-.pool-number:hover {
-    border-color: var(--primary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-}
-
-.pool-number:active {
-    cursor: grabbing;
-}
-
-/* Buttons */
-footer {
-    display: flex;
-    gap: 1rem;
-}
-
-.btn {
-    flex: 1;
-    padding: 1.2rem;
-    border: none;
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-}
-
-.btn-secondary {
-    background: var(--secondary);
-    color: var(--text);
-    border: 1px solid var(--border);
-}
-
-.btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-/* Overlay & Utility */
+/* Utility to hide things */
 .hidden {
     display: none !important;
 }
 
-.overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(8px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-    transition: all 0.5s;
-}
-
-.overlay-content {
-    background: var(--bg-dark);
-    padding: 3rem;
-    border-radius: 32px;
-    border: 1px solid var(--glass-border);
-    text-align: center;
-    max-width: 400px;
-    box-shadow: var(--shadow);
-}
-
-.overlay h2 {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.overlay p {
-    margin-bottom: 2rem;
+/* Fixed (Hint) Cell */
+.cell-fixed {
+    background-color: var(--secondary);
+    color: var(--text-main);
+    border-color: var(--secondary);
+    cursor: default;
+    box-shadow: none;
     opacity: 0.8;
 }
 
-/* Drag & Drop Classes */
-.dragging {
-    opacity: 0.5;
-}
-
-.drag-over {
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid var(--secondary);
-}
-
-.hidden {
-    display: none !important;
+.cell-fixed.filled {
+    background-color: var(--secondary);
+    /* Override filled color */
+    color: var(--text-main);
+    border-color: var(--secondary);
+    box-shadow: none;
 }

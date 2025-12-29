@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const numberPool = document.getElementById('number-pool');
     const checkBtn = document.getElementById('check-btn');
     const newGameBtn = document.getElementById('new-game-btn');
+    const menuBtn = document.getElementById('menu-btn');
     const levelDisplay = document.getElementById('level-display');
     const scoreDisplay = document.getElementById('score-display');
     const winOverlay = document.getElementById('win-overlay');
@@ -23,10 +24,49 @@ document.addEventListener('DOMContentLoaded', () => {
     let startCol = 0;
 
     const OPERATORS = ['+', '-', '*', '/'];
+    // Difficulty State
+    let difficulty = 'easy'; // Default
+    const difficultyScreen = document.getElementById('difficulty-screen');
+    const difficultyBtns = document.querySelectorAll('#difficulty-screen button');
 
-    // --- Initialization ---
+    if (menuBtn) {
+        menuBtn.addEventListener('click', () => {
+            difficultyScreen.classList.remove('hidden');
+        });
+    }
+
+    difficultyBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            difficulty = btn.dataset.diff;
+            difficultyScreen.classList.add('hidden');
+            // Save difficulty preference
+            localStorage.setItem('mathCrossword_difficulty', difficulty);
+            // Reset game for new difficulty
+            startNewGameWithDifficulty();
+        });
+    });
+
+    function startNewGameWithDifficulty() {
+        currentLevel = 1;
+        currentScore = 0;
+        gridData = [];
+        poolNumbers = [];
+        localStorage.removeItem('mathCrossword_currentPuzzle'); // clear old puzzle
+        saveProgress(); // save reset level
+        initGame();
+    }
 
     function initGameData() {
+        // Load difficulty
+        const savedDiff = localStorage.getItem('mathCrossword_difficulty');
+        if (savedDiff) {
+            difficulty = savedDiff;
+        } else {
+            // Show selection screen if no difficulty saved (first time or clear)
+            difficultyScreen.classList.remove('hidden');
+            return; // Wait for selection
+        }
+
         const savedProgress = JSON.parse(localStorage.getItem('mathCrossword_progress'));
         if (savedProgress) {
             currentLevel = savedProgress.level || 1;
@@ -34,7 +74,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const savedPuzzle = JSON.parse(localStorage.getItem('mathCrossword_currentPuzzle'));
-        if (savedPuzzle) {
+
+        // Validate saved puzzle
+        let isValid = false;
+        if (savedPuzzle && savedPuzzle.gridData) {
+            // Check if there are any numbers in the grid
+            const hasNumbers = savedPuzzle.gridData.some(row =>
+                row.some(cell => cell.type === 'number')
+            );
+            if (hasNumbers) isValid = true;
+        }
+
+        if (isValid) {
             gridData = savedPuzzle.gridData;
             poolNumbers = savedPuzzle.poolNumbers;
             startRow = savedPuzzle.startRow;
@@ -46,12 +97,27 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPool();
             updateStats();
         } else {
+            console.log("No valid saved puzzle found, initializing new game.");
             initGame();
         }
     }
 
     function initGame() {
-        generateChainedPuzzle();
+        // Retry logic to ensure we get a valid puzzle
+        let attempts = 0;
+        let success = false;
+
+        while (!success && attempts < 5) {
+            attempts++;
+            success = generateChainedPuzzle();
+        }
+
+        if (!success) {
+            console.error("Failed to generate puzzle after multiple attempts");
+            // Fallback to a simple state or alert user?
+            // For now, let's just proceed, renderGrid will handle empty gracefully-ish
+        }
+
         renderGrid();
         renderPool();
         updateStats();
@@ -75,12 +141,29 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('mathCrossword_progress', JSON.stringify(progress));
     }
 
+    function getDifficultyConfig() {
+        switch (difficulty) {
+            case 'easy':
+                return { maxNum: 10, hintPct: 0.5, ops: ['+', '-'] };
+            case 'medium':
+                return { maxNum: 15, hintPct: 0.2, ops: ['+', '-', '*'] };
+            case 'hard':
+                return { maxNum: 50, hintPct: 0, ops: ['+', '-', '*', '/'] };
+            default:
+                return { maxNum: 10, hintPct: 0.5, ops: ['+', '-'] };
+        }
+    }
+
     function generateChainedPuzzle() {
         // Initialize empty grid (larger to allow more freedom)
         gridData = Array(fullGridSize).fill(null).map(() =>
             Array(fullGridSize).fill(null).map(() => ({ type: 'empty' }))
         );
         poolNumbers = [];
+
+        const config = getDifficultyConfig();
+        const currentOps = config.ops;
+        const maxNumber = config.maxNum;
 
         // Equations count increases with level
         const targetEquations = Math.min(3 + Math.floor(currentLevel / 2), 7); // Capped at 7 for screen size
@@ -118,77 +201,153 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        if (equationsCount === 0) return false; // failed to place any
+
         calculateGridBoundaries();
 
         const allNumbers = [];
+        const numberCells = [];
+
+        // Collect all number cells
         for (let r = 0; r < fullGridSize; r++) {
             for (let c = 0; c < fullGridSize; c++) {
                 if (gridData[r][c].type === 'number') {
-                    allNumbers.push(gridData[r][c].correct);
+                    numberCells.push({ r, c, val: gridData[r][c].correct });
                 }
             }
         }
+
+        // Apply hints
+        const hintsCount = Math.floor(numberCells.length * config.hintPct);
+        // Shuffle to pick random hints
+        numberCells.sort(() => Math.random() - 0.5);
+
+        numberCells.forEach((cell, idx) => {
+            if (idx < hintsCount) {
+                // Mark as fixed hint
+                gridData[cell.r][cell.c].value = cell.val;
+                gridData[cell.r][cell.c].fixed = true;
+            } else {
+                // Add to pool
+                allNumbers.push(cell.val);
+            }
+        });
+
         poolNumbers = allNumbers.sort(() => Math.random() - 0.5);
+        return true; // success
 
         function tryPlaceEquation(r, c, dir, seed) {
             const dr = dir === 'V' ? 1 : 0;
             const dc = dir === 'H' ? 1 : 0;
 
-            if (r < 0 || c < 0 || r + dr * 4 >= fullGridSize || c + dc * 4 >= fullGridSize) return false;
+            // Hard mode prefer length 7 (3 numbers), else length 5 (2 numbers)
+            let eqLen = 5;
+            if (difficulty === 'hard' && Math.random() > 0.0) { // Always 3-term if hard? Or mix? Requirement said "at least 6 boxes", so length 7 is good (7 boxes). Let's do most of the time.
+                eqLen = 7;
+            }
+
+            const maxIdx = eqLen - 1;
+            if (r < 0 || c < 0 || r + dr * maxIdx >= fullGridSize || c + dc * maxIdx >= fullGridSize) return false;
 
             // Collision check
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < eqLen; i++) {
                 const tr = r + dr * i;
                 const tc = c + dc * i;
                 const existing = gridData[tr][tc];
 
-                // If seed is provided, it must match at cell 0, 2, or 4
+                // Seed valid indices: 0, 2, 4 (for both), and 6 (for len 7)
+                // These are the Node Positions (numbers or result)
+                const isNodePos = (i % 2 === 0);
+
                 if (seed && seed.r === tr && seed.c === tc) {
-                    if (i !== 0 && i !== 2 && i !== 4) return false;
+                    if (!isNodePos) return false;
+                    // Seed index must be valid node pos
                     continue;
                 }
+
                 if (existing.type !== 'empty') return false;
             }
 
-            // Crossword look: check neighbors of the new path to avoid clumping
-            // (Keep it sparse)
-            for (let i = 0; i < 5; i++) {
+            // Neighbor Check
+            for (let i = 0; i < eqLen; i++) {
                 const tr = r + dr * i;
                 const tc = c + dc * i;
                 if (seed && seed.r === tr && seed.c === tc) continue;
 
-                // Check side neighbors
                 const nr = dr === 0 ? 1 : 0;
                 const nc = dc === 0 ? 1 : 0;
+                if (checkNeighbor(tr + nr, tc + nc)) return false;
+                if (checkNeighbor(tr - nr, tc - nc)) return false;
+            }
 
-                const n1r = tr + nr, n1c = tc + nc;
-                const n2r = tr - nr, n2c = tc - nc;
-
-                if (n1r >= 0 && n1r < fullGridSize && n1c >= 0 && n1c < fullGridSize) {
-                    if (gridData[n1r][n1c].type !== 'empty') return false;
+            function checkNeighbor(nr, nc) {
+                if (nr >= 0 && nr < fullGridSize && nc >= 0 && nc < fullGridSize) {
+                    if (gridData[nr][nc].type !== 'empty') return true;
                 }
-                if (n2r >= 0 && n2r < fullGridSize && n2c >= 0 && n2c < fullGridSize) {
-                    if (gridData[n2r][n2c].type !== 'empty') return false;
+                return false;
+            }
+
+            // Generate Content
+            let cellsToPlace = [];
+            let valid = false;
+
+            // Allow multiple attempts to find valid numbers
+            for (let attempt = 0; attempt < 20; attempt++) {
+                if (eqLen === 5) {
+                    let n1 = getValAt(0);
+                    let n2 = getValAt(2);
+                    let nRes = getValAt(4);
+                    let op = currentOps[Math.floor(Math.random() * currentOps.length)];
+
+                    if (!n1) n1 = randNum();
+                    if (!n2) n2 = randNum();
+
+                    let res = calculate(n1, op, n2);
+
+                    if (isValidResult(res, nRes)) {
+                        cellsToPlace = [
+                            { type: 'number', val: n1, pos: [r, c] },
+                            { type: 'operator', val: op, pos: [r + dr, c + dc] },
+                            { type: 'number', val: n2, pos: [r + dr * 2, c + dc * 2] },
+                            { type: 'operator', val: '=', pos: [r + dr * 3, c + dc * 3] },
+                            { type: 'result', val: res, pos: [r + dr * 4, c + dc * 4] }
+                        ];
+                        valid = true;
+                        break;
+                    }
+                } else {
+                    // Length 7
+                    let n1 = getValAt(0);
+                    let n2 = getValAt(2);
+                    let n3 = getValAt(4);
+                    let nRes = getValAt(6);
+
+                    let op1 = currentOps[Math.floor(Math.random() * currentOps.length)];
+                    let op2 = currentOps[Math.floor(Math.random() * currentOps.length)];
+
+                    if (!n1) n1 = randNum();
+                    if (!n2) n2 = randNum();
+                    if (!n3) n3 = randNum();
+
+                    let res = calculate3(n1, op1, n2, op2, n3);
+
+                    if (isValidResult(res, nRes)) {
+                        cellsToPlace = [
+                            { type: 'number', val: n1, pos: [r, c] },
+                            { type: 'operator', val: op1, pos: [r + dr, c + dc] },
+                            { type: 'number', val: n2, pos: [r + dr * 2, c + dc * 2] },
+                            { type: 'operator', val: op2, pos: [r + dr * 3, c + dc * 3] },
+                            { type: 'number', val: n3, pos: [r + dr * 4, c + dc * 4] },
+                            { type: 'operator', val: '=', pos: [r + dr * 5, c + dc * 5] },
+                            { type: 'result', val: res, pos: [r + dr * 6, c + dc * 6] }
+                        ];
+                        valid = true;
+                        break;
+                    }
                 }
             }
 
-            let n1 = seed && r === seed.r && c === seed.c ? seed.val : Math.floor(Math.random() * 9) + 1;
-            let n2 = seed && r + dr * 2 === seed.r && c + dc * 2 === seed.c ? seed.val : Math.floor(Math.random() * 9) + 1;
-            let nRes = seed && r + dr * 4 === seed.r && c + dc * 4 === seed.c ? seed.val : null;
-
-            let op = OPERATORS[Math.floor(Math.random() * 4)];
-            let res = calculate(n1, op, n2);
-
-            if (nRes !== null && res !== nRes) return false;
-            if (!Number.isInteger(res) || res <= 0 || res > 99) return false;
-
-            const cellsToPlace = [
-                { type: 'number', val: n1, pos: [r, c] },
-                { type: 'operator', val: op, pos: [r + dr, c + dc] },
-                { type: 'number', val: n2, pos: [r + dr * 2, c + dc * 2] },
-                { type: 'operator', val: '=', pos: [r + dr * 3, c + dc * 3] },
-                { type: 'result', val: res, pos: [r + dr * 4, c + dc * 4] }
-            ];
+            if (!valid) return false;
 
             cellsToPlace.forEach((cell) => {
                 const [tr, tc] = cell.pos;
@@ -204,6 +363,30 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             return true;
+
+            function getValAt(idx) {
+                const tr = r + dr * idx;
+                const tc = c + dc * idx;
+                if (seed && seed.r === tr && seed.c === tc) return seed.val;
+                return null;
+            }
+            function randNum() { return Math.floor(Math.random() * maxNumber) + 1; }
+            function isValidResult(res, fixedRes) {
+                if (fixedRes !== null && res !== fixedRes) return false;
+                if (!Number.isInteger(res) || res <= 0 || res > (maxNumber * maxNumber * 2)) return false;
+                return true;
+            }
+        } // end tryPlaceEquation
+
+        function calculate3(n1, op1, n2, op2, n3) {
+            const isHigh = (op) => op === '*' || op === '/';
+            if (!isHigh(op1) && isHigh(op2)) {
+                const intermediate = calculate(n2, op2, n3);
+                return calculate(n1, op1, intermediate);
+            } else {
+                const intermediate = calculate(n1, op1, n2);
+                return calculate(intermediate, op2, n3);
+            }
         }
     }
 
@@ -250,16 +433,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateScaling = () => {
             const gameArea = document.querySelector('.game-area');
             if (!gameArea) return;
-            const availableWidth = gameArea.clientWidth - 30; // 15px margin each side
-            const availableHeight = gameArea.clientHeight - 30;
-            const gap = 6;
+            const availableWidth = gameArea.clientWidth - 10; // Reduced margin
+            const availableHeight = gameArea.clientHeight - 10;
+            const gap = 4; // Smaller gap for tight spaces
 
             const maxCellW = (availableWidth - (displayCols - 1) * gap) / displayCols;
             const maxCellH = (availableHeight - (displayRows - 1) * gap) / displayRows;
-            const cellSize = Math.max(30, Math.floor(Math.min(maxCellW, maxCellH, 75)));
 
+            // Allow cells to go much smaller, e.g. down to 20px if needed
+            const cellSize = Math.floor(Math.min(maxCellW, maxCellH, 70));
+
+            puzzleGrid.style.gap = `${gap}px`;
             puzzleGrid.style.width = `${cellSize * displayCols + (displayCols - 1) * gap}px`;
-            puzzleGrid.style.fontSize = `${cellSize * 0.45}px`;
+            puzzleGrid.style.fontSize = `${Math.max(12, cellSize * 0.5)}px`; // Ensure text remains legible-ish
         };
 
         updateScaling();
@@ -279,12 +465,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (cell.type === 'number') {
                     div.textContent = cell.value || '';
                     if (cell.value) div.classList.add('filled');
+                    if (cell.fixed) div.classList.add('cell-fixed');
 
-                    div.addEventListener('dragover', e => e.preventDefault());
-                    div.addEventListener('dragenter', handleDragEnter);
-                    div.addEventListener('dragleave', handleDragLeave);
-                    div.addEventListener('drop', handleDrop);
-                    div.addEventListener('click', handleCellClick);
+                    if (!cell.fixed) {
+                        div.addEventListener('dragover', e => e.preventDefault());
+                        div.addEventListener('dragenter', handleDragEnter);
+                        div.addEventListener('dragleave', handleDragLeave);
+                        div.addEventListener('drop', handleDrop);
+                        div.addEventListener('click', handleCellClick);
+                    }
                 } else if (cell.type !== 'empty') {
                     div.textContent = cell.value;
                 }
